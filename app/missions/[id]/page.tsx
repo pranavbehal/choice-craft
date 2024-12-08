@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,9 @@ export default function MissionPage() {
   const [systemMessage, setSystemMessage] = useState("");
   const [showUserMessage, setShowUserMessage] = useState(false);
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  const [showTitle, setShowTitle] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   // Set up system message when mission changes
   useEffect(() => {
@@ -53,55 +56,6 @@ export default function MissionPage() {
     Keep responses concise (1-3 sentences) and stay in character.
     Guide the user through the mission while maintaining the story's atmosphere.`);
   }, [currentMission]);
-
-  // Process the AI message to extract JSON and generate image
-  const processAIResponse = async (content: string) => {
-    try {
-      // Find JSON block in the response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const jsonData = JSON.parse(jsonMatch[0]);
-
-        // Update progress if provided
-        if (jsonData.progress?.value !== undefined) {
-          const newProgress = Math.max(
-            0,
-            Math.min(100, jsonData.progress.value)
-          );
-          updateProgress(newProgress);
-        }
-
-        // Generate image if prompt is provided
-        if (jsonData.imagePrompt) {
-          try {
-            const imageResponse = await fetch("/api/generate-image", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ prompt: jsonData.imagePrompt }),
-            });
-
-            const imageData = await imageResponse.json();
-            console.log("Image generation response:", imageData);
-
-            if (imageData.imageUrl) {
-              setBackgroundImage(imageData.imageUrl);
-            } else {
-              console.error("No image URL in response:", imageData);
-            }
-          } catch (error) {
-            console.error("Error generating image:", error);
-          }
-        }
-
-        // Return clean message without JSON
-        return content.replace(jsonMatch[0], "").trim();
-      }
-      return content;
-    } catch (error) {
-      console.error("Error processing AI response:", error);
-      return content;
-    }
-  };
 
   const { messages, input, handleInputChange, append } = useChat({
     api: "/api/chat",
@@ -119,6 +73,11 @@ export default function MissionPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isTyping) return;
+
+    // Fade out title if this is the first message
+    if (messages.length === 0) {
+      setShowTitle(false);
+    }
 
     const userInput = input;
     handleInputChange({
@@ -161,64 +120,72 @@ export default function MissionPage() {
     }
   }, []);
 
-  // Type out the latest message
+  // Modify the typing effect useEffect
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
     if (lastMessage?.role === "assistant" && !showUserMessage) {
       setIsTyping(true);
-      let index = 0;
+      setCurrentText(""); // Clear text immediately
 
-      try {
-        // Parse the JSON response
-        const responseData = JSON.parse(lastMessage.content);
+      const processMessage = async () => {
+        try {
+          const responseData = JSON.parse(lastMessage.content);
+          const text = responseData.userResponse;
 
-        // Handle image generation
-        if (responseData.imagePrompt) {
-          fetch("/api/generate-image", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: responseData.imagePrompt }),
-          })
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.imageUrl) {
-                setBackgroundImage(data.imageUrl);
+          // Handle image generation first
+          if (responseData.imagePrompt) {
+            try {
+              const imageResponse = await fetch("/api/generate-image", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: responseData.imagePrompt }),
+              });
+
+              const imageData = await imageResponse.json();
+              if (imageData.imageUrl) {
+                setBackgroundImage(imageData.imageUrl);
               }
-            })
-            .catch((error) => console.error("Image generation error:", error));
-        }
+            } catch (error) {
+              console.error("Error generating image:", error);
+            }
+          }
 
-        // Handle progress update
-        if (responseData.progress !== undefined) {
-          const newProgress = Math.max(0, Math.min(100, responseData.progress));
-          updateProgress(newProgress);
-        }
+          // Extract character name and speech text
+          const [characterName, speechText] = text.split(": ");
 
-        // Type out only the userResponse
-        const text = responseData.userResponse;
-        const interval = setInterval(() => {
-          setCurrentText(text.slice(0, index));
-          index++;
-          if (index > text.length) {
-            clearInterval(interval);
+          // Wait for audio to start playing before starting text animation
+          try {
+            await playTextToSpeech(speechText, characterName);
+
+            // Start typewriter effect
+            let index = 0;
+            const typewriterInterval = setInterval(() => {
+              if (index <= text.length) {
+                setCurrentText(text.slice(0, index));
+                index++;
+              } else {
+                clearInterval(typewriterInterval);
+                setIsTyping(false);
+              }
+            }, 30); // Adjust timing to match speech rate
+
+            // Cleanup interval on unmount
+            return () => {
+              clearInterval(typewriterInterval);
+            };
+          } catch (error) {
+            console.error("Error with audio playback:", error);
+            // Fallback to instant text display if audio fails
+            setCurrentText(text);
             setIsTyping(false);
           }
-        }, 25);
+        } catch (error) {
+          console.error("Error processing message:", error);
+          setIsTyping(false);
+        }
+      };
 
-        return () => clearInterval(interval);
-      } catch (error) {
-        console.error("Error parsing AI response:", error);
-        const interval = setInterval(() => {
-          setCurrentText(lastMessage.content.slice(0, index));
-          index++;
-          if (index > lastMessage.content.length) {
-            clearInterval(interval);
-            setIsTyping(false);
-          }
-        }, 25);
-
-        return () => clearInterval(interval);
-      }
+      processMessage();
     }
   }, [messages, currentMission.companion, showUserMessage]);
 
@@ -254,20 +221,19 @@ export default function MissionPage() {
     return "opacity-40 scale-75";
   };
 
+  // Update getDisplayMessage to handle the typewriter effect
   const getDisplayMessage = () => {
-    if (showUserMessage || isTyping) return currentText;
+    if (showUserMessage) return currentText;
+    if (isTyping && !currentText) return "Loading...";
     if (!lastMessage) return "Begin your adventure...";
 
     try {
       if (lastMessage.role === "user") {
         return lastMessage.content;
       } else {
-        // Parse the JSON response
-        const responseData = JSON.parse(lastMessage.content);
-        return responseData.userResponse;
+        return currentText || "Loading...";
       }
     } catch (error) {
-      // Fallback if JSON parsing fails
       console.error("Error parsing message:", error);
       return lastMessage.content;
     }
@@ -315,11 +281,65 @@ export default function MissionPage() {
     }
   }, [backgroundImage]);
 
+  // Move playTextToSpeech inside the component
+  const playTextToSpeech = async (text: string, character: string) => {
+    try {
+      // Stop any currently playing audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+
+      const response = await fetch("/api/text-to-speech", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text, character }),
+      });
+
+      if (!response.ok) throw new Error("Failed to generate speech");
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+
+        // Return a promise that resolves when the audio starts playing
+        return new Promise<void>((resolve, reject) => {
+          if (audioRef.current) {
+            audioRef.current.onerror = reject;
+            audioRef.current.onplay = () => {
+              setIsPlaying(true);
+              resolve();
+            };
+            audioRef.current.onended = () => {
+              URL.revokeObjectURL(audioUrl);
+              setIsPlaying(false);
+            };
+            audioRef.current.play().catch(reject);
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error playing text to speech:", error);
+      throw error;
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col relative">
-      {/* Background div that starts with the default image */}
+      <audio
+        ref={audioRef}
+        className="hidden"
+        // Uncomment for debugging
+        // controls
+      />
+
+      {/* Background div with improved transitions */}
       <div
-        className="absolute inset-0 -z-10 transition-opacity duration-300"
+        className="absolute inset-0 -z-10 transition-all duration-1000"
         style={{
           backgroundImage: `url(${currentMission?.image})`,
           backgroundSize: "cover",
@@ -355,12 +375,40 @@ export default function MissionPage() {
           </div>
         </div>
 
-        {/* Mission Title - Adjusted for nav height */}
+        {/* Character Images with improved transitions */}
+        <div className="absolute -top-40 w-full flex justify-between items-end z-10">
+          <div className="flex flex-col items-center ml-6">
+            <Image
+              src={aiAvatar}
+              alt="AI companion"
+              width={160}
+              height={160}
+              className={`transition-all duration-500 ${getCharacterOpacity(
+                "assistant"
+              )}`}
+            />
+          </div>
+          <div className="flex flex-col items-center mr-6">
+            <Image
+              src={userAvatar}
+              alt="User avatar"
+              width={160}
+              height={160}
+              className={`transition-all duration-300 ${getCharacterOpacity(
+                "user"
+              )}`}
+            />
+          </div>
+        </div>
+
+        {/* Mission Title with fade out animation */}
         <div
-          className="absolute w-full"
+          className="absolute w-full transition-opacity duration-1000"
           style={{
             top: `calc(50% - var(--nav-height))`,
             transform: "translateY(-50%)",
+            opacity: showTitle ? 1 : 0,
+            pointerEvents: showTitle ? "auto" : "none",
           }}
         >
           <h1 className="text-5xl font-bold text-white text-center tracking-tight drop-shadow-lg">
@@ -381,7 +429,7 @@ export default function MissionPage() {
                       alt="AI companion"
                       width={160}
                       height={160}
-                      className={`transition-all duration-300 ${getCharacterOpacity(
+                      className={`transition-all duration-500 ${getCharacterOpacity(
                         "assistant"
                       )}`}
                     />
@@ -402,11 +450,15 @@ export default function MissionPage() {
                 {/* Dialogue Box */}
                 <div className="bg-[#F6E6C5] border-4 border-[#8B7355] rounded-2xl p-6 shadow-lg">
                   <p className="text-black text-lg min-h-[28px] [&>span]:font-bold">
-                    {getDisplayMessage()
-                      .split(": ")
-                      .map((part, index, array) =>
-                        index === 0 ? <span key={index}>{part}: </span> : part
-                      )}
+                    {isTyping && !currentText ? (
+                      <span className="animate-pulse">Loading...</span>
+                    ) : (
+                      getDisplayMessage()
+                        .split(": ")
+                        .map((part: string, index: number) =>
+                          index === 0 ? <span key={index}>{part}: </span> : part
+                        )
+                    )}
                   </p>
                 </div>
                 <div

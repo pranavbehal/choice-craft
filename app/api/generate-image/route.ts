@@ -24,7 +24,6 @@ export async function POST(req: Request) {
 
     // Wait for the prediction to complete
     const result = await replicate.wait(prediction);
-    console.log("Prediction result:", result);
 
     if (
       result.output &&

@@ -95,7 +95,7 @@ export default function Home() {
                         {mission.difficulty}
                       </Badge>
                       <span className="text-sm text-muted-foreground">
-                        AI: {mission.companion}
+                        Companion: {mission.companion}
                       </span>
                     </div>
                     <div className="space-y-2">
