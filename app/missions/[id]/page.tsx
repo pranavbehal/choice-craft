@@ -37,6 +37,7 @@ export default function MissionPage() {
   const [currentText, setCurrentText] = useState("");
   const [systemMessage, setSystemMessage] = useState("");
   const [showUserMessage, setShowUserMessage] = useState(false);
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
 
   // Set up system message when mission changes
   useEffect(() => {
@@ -53,15 +54,65 @@ export default function MissionPage() {
     Guide the user through the mission while maintaining the story's atmosphere.`);
   }, [currentMission]);
 
+  // Process the AI message to extract JSON and generate image
+  const processAIResponse = async (content: string) => {
+    try {
+      // Find JSON block in the response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const jsonData = JSON.parse(jsonMatch[0]);
+
+        // Update progress if provided
+        if (jsonData.progress?.value !== undefined) {
+          const newProgress = Math.max(
+            0,
+            Math.min(100, jsonData.progress.value)
+          );
+          updateProgress(newProgress);
+        }
+
+        // Generate image if prompt is provided
+        if (jsonData.imagePrompt) {
+          try {
+            const imageResponse = await fetch("/api/generate-image", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ prompt: jsonData.imagePrompt }),
+            });
+
+            const imageData = await imageResponse.json();
+            console.log("Image generation response:", imageData);
+
+            if (imageData.imageUrl) {
+              setBackgroundImage(imageData.imageUrl);
+            } else {
+              console.error("No image URL in response:", imageData);
+            }
+          } catch (error) {
+            console.error("Error generating image:", error);
+          }
+        }
+
+        // Return clean message without JSON
+        return content.replace(jsonMatch[0], "").trim();
+      }
+      return content;
+    } catch (error) {
+      console.error("Error processing AI response:", error);
+      return content;
+    }
+  };
+
   const { messages, input, handleInputChange, append } = useChat({
     api: "/api/chat",
     initialMessages: [],
     body: {
       systemMessage,
+      currentProgress: progress,
     },
     onFinish: () => {
       setIsTyping(false);
-      updateProgress(Math.min(progress + 10, 100));
+      // console.log(messages);
     },
   });
 
@@ -90,7 +141,7 @@ export default function MissionPage() {
 
   // Add this to see all messages
   useEffect(() => {
-    console.log("Current messages:", messages);
+    // console.log("Current messages:", messages);
   }, [messages]);
 
   // Handle mission finding
@@ -116,30 +167,66 @@ export default function MissionPage() {
     if (lastMessage?.role === "assistant" && !showUserMessage) {
       setIsTyping(true);
       let index = 0;
-      const baseText = lastMessage.content.replace(
-        `${currentMission.companion}: `,
-        ""
-      );
-      const formattedText = `${currentMission.companion}: ${baseText}`;
 
-      const interval = setInterval(() => {
-        setCurrentText(formattedText.slice(0, index));
-        index++;
-        if (index > formattedText.length) {
-          clearInterval(interval);
-          setIsTyping(false);
+      try {
+        // Parse the JSON response
+        const responseData = JSON.parse(lastMessage.content);
+
+        // Handle image generation
+        if (responseData.imagePrompt) {
+          fetch("/api/generate-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: responseData.imagePrompt }),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.imageUrl) {
+                setBackgroundImage(data.imageUrl);
+              }
+            })
+            .catch((error) => console.error("Image generation error:", error));
         }
-      }, 25);
 
-      return () => clearInterval(interval);
+        // Handle progress update
+        if (responseData.progress !== undefined) {
+          const newProgress = Math.max(0, Math.min(100, responseData.progress));
+          updateProgress(newProgress);
+        }
+
+        // Type out only the userResponse
+        const text = responseData.userResponse;
+        const interval = setInterval(() => {
+          setCurrentText(text.slice(0, index));
+          index++;
+          if (index > text.length) {
+            clearInterval(interval);
+            setIsTyping(false);
+          }
+        }, 25);
+
+        return () => clearInterval(interval);
+      } catch (error) {
+        console.error("Error parsing AI response:", error);
+        const interval = setInterval(() => {
+          setCurrentText(lastMessage.content.slice(0, index));
+          index++;
+          if (index > lastMessage.content.length) {
+            clearInterval(interval);
+            setIsTyping(false);
+          }
+        }, 25);
+
+        return () => clearInterval(interval);
+      }
     }
   }, [messages, currentMission.companion, showUserMessage]);
 
   // Debug messages
   useEffect(() => {
     if (messages.length > 0) {
-      console.log("Messages updated:", messages);
-      console.log("Last message:", messages[messages.length - 1]);
+      // console.log("Messages updated:", messages);
+      // console.log("Last message:", messages[messages.length - 1]);
     }
   }, [messages]);
 
@@ -171,14 +258,18 @@ export default function MissionPage() {
     if (showUserMessage || isTyping) return currentText;
     if (!lastMessage) return "Begin your adventure...";
 
-    if (lastMessage.role === "user") {
+    try {
+      if (lastMessage.role === "user") {
+        return lastMessage.content;
+      } else {
+        // Parse the JSON response
+        const responseData = JSON.parse(lastMessage.content);
+        return responseData.userResponse;
+      }
+    } catch (error) {
+      // Fallback if JSON parsing fails
+      console.error("Error parsing message:", error);
       return lastMessage.content;
-    } else {
-      const baseText = lastMessage.content.replace(
-        `${currentMission.companion}: `,
-        ""
-      );
-      return `${currentMission.companion}: ${baseText}`;
     }
   };
 
@@ -190,17 +281,54 @@ export default function MissionPage() {
     }
   }, [messages]);
 
+  // Update background when it changes
+  useEffect(() => {
+    if (backgroundImage) {
+      const mainDiv = document.querySelector<HTMLDivElement>(".min-h-screen");
+      if (mainDiv) {
+        // Create/update a background div for smooth transitions
+        let bgDiv = mainDiv.querySelector<HTMLDivElement>(".bg-transition");
+        if (!bgDiv) {
+          bgDiv = document.createElement("div");
+          bgDiv.className = "bg-transition absolute inset-0 -z-10";
+          mainDiv.insertBefore(bgDiv, mainDiv.firstChild);
+        }
+
+        // Preload the image
+        const img = document.createElement("img");
+        img.onload = () => {
+          // Set up the new background with fade
+          bgDiv.style.backgroundImage = `url(${backgroundImage})`;
+          bgDiv.style.backgroundSize = "cover";
+          bgDiv.style.backgroundPosition = "center";
+          bgDiv.style.backgroundAttachment = "fixed";
+          bgDiv.style.opacity = "0";
+          bgDiv.style.transition = "opacity 0.3s ease-in-out";
+
+          // Trigger the fade in
+          requestAnimationFrame(() => {
+            bgDiv.style.opacity = "1";
+          });
+        };
+        img.src = backgroundImage;
+      }
+    }
+  }, [backgroundImage]);
+
   return (
-    <div
-      className="min-h-screen flex flex-col relative"
-      style={{
-        backgroundImage: `url(${currentMission?.image})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
-        opacity: 1,
-      }}
-    >
+    <div className="min-h-screen flex flex-col relative">
+      {/* Background div that starts with the default image */}
+      <div
+        className="absolute inset-0 -z-10 transition-opacity duration-300"
+        style={{
+          backgroundImage: `url(${currentMission?.image})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundAttachment: "fixed",
+          opacity: backgroundImage ? 0 : 1,
+        }}
+      />
+
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/60 pointer-events-none" />
 
