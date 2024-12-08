@@ -1,14 +1,30 @@
+/**
+ * Text-to-Speech API Route Handler
+ *
+ * Integrates with ElevenLabs API to generate character voices.
+ * Maps character names to specific voice IDs and handles audio stream generation.
+ *
+ * @route POST /api/text-to-speech
+ */
+
 import { NextResponse } from "next/server";
 
+/** ElevenLabs API authentication key */
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
+/** Map of character names to their corresponding ElevenLabs voice IDs */
 const VOICE_IDS = {
-  "Professor Blue": "1SM7GgM6IMuvQlz2BwM3",
-  "Captain Nova": "DATmubGSst6fXALPucOB",
-  "Fairy Lumi": "XfNU2rGpBa01ckF309OY",
-  "Sergeant Nexus": "sjwRAsCdMJodJszgJ6Ks",
+  "Professor Blue": "sjwRAsCdMJodJszgJ6Ks", // Scholarly, mature voice
+  "Captain Nova": "pqHfZKP75CvOlQylNhV4", // Confident, authoritative voice
+  "Fairy Lumi": "XfNU2rGpBa01ckF309OY", // Gentle, mystical voice
+  "Sergeant Nexus": "sjwRAsCdMJodJszgJ6Ks", // Direct, professional voice
 };
 
+/**
+ * POST request handler for text-to-speech conversion
+ * @param {Request} req - Request object containing text and character information
+ * @returns {Response} Audio stream or error response
+ */
 export async function POST(req: Request) {
   try {
     const { text, character } = await req.json();
@@ -18,6 +34,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid character" }, { status: 400 });
     }
 
+    // Generate speech using ElevenLabs API
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
       {
@@ -31,8 +48,8 @@ export async function POST(req: Request) {
           text,
           model_id: "eleven_turbo_v2_5",
           voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
+            stability: 0.5, // Balance between stable and variable speech
+            similarity_boost: 0.75, // Higher similarity to original voice
           },
         }),
       }

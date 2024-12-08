@@ -1,3 +1,13 @@
+/**
+ * Settings Page Component
+ *
+ * User preferences management interface.
+ * Handles audio settings and avatar customization.
+ *
+ * @component
+ * @requires Authentication
+ */
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,9 +20,14 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import Image from "next/image";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDatabase } from "@/hooks/useDatabase";
+import { toast } from "sonner";
+import { getAvatarPath } from "@/lib/utils";
 
+/** Available avatar options */
 const avatars = [
   "/avatars/avatar-1.png",
   "/avatars/avatar-2.png",
@@ -21,21 +36,86 @@ const avatars = [
 ];
 
 export default function SettingsPage() {
-  const [voiceVolume, setVoiceVolume] = useState(50);
-  const [sfxVolume, setSfxVolume] = useState(50);
+  const { user } = useAuth();
+  const { updateUserSettings, settings, loading } = useDatabase();
+  const [voiceOn, setVoiceOn] = useState(true);
   const [selectedAvatar, setSelectedAvatar] = useState(avatars[0]);
+  const [updating, setUpdating] = useState(false);
 
-  useEffect(() => {
-    const savedAvatar = localStorage.getItem("userAvatar");
-    if (savedAvatar) {
-      setSelectedAvatar(savedAvatar);
+  /**
+   * Handles voice synthesis toggle
+   * Updates user preferences in database
+   * @param {boolean} enabled - New voice state
+   */
+  const handleVoiceToggle = async (enabled: boolean) => {
+    if (updating) return;
+    setUpdating(true);
+
+    try {
+      await updateUserSettings({ voice_on: enabled });
+      setVoiceOn(enabled);
+      toast.success("Voice settings updated");
+    } catch (err) {
+      console.error("Failed to update voice settings:", err);
+      setVoiceOn(!enabled); // Revert on error
+      toast.error("Failed to update voice settings. Please try again.");
+    } finally {
+      setUpdating(false);
     }
-  }, []);
-
-  const handleAvatarSelect = (avatar: string) => {
-    setSelectedAvatar(avatar);
-    localStorage.setItem("userAvatar", avatar);
   };
+
+  /**
+   * Handles avatar selection and update
+   * @param {string} avatar - Path to selected avatar image
+   */
+  const handleAvatarSelect = async (avatar: string) => {
+    if (updating) return;
+    setUpdating(true);
+
+    const avatarIndex = avatars.indexOf(avatar) + 1;
+    try {
+      await updateUserSettings({ profile_picture: avatarIndex });
+      setSelectedAvatar(avatar);
+      toast.success("Avatar updated");
+    } catch (err) {
+      console.error("Failed to update avatar:", err);
+      toast.error("Failed to update avatar. Please try again.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Load settings from database
+  useEffect(() => {
+    if (settings) {
+      setVoiceOn(settings.voice_on);
+      if (settings.profile_picture) {
+        setSelectedAvatar(getAvatarPath(settings.profile_picture));
+      }
+    }
+  }, [settings]);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="container mx-auto px-4 py-8">
+          <p className="text-center">Please sign in to access settings.</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="container mx-auto px-4 py-8">
+          <p className="text-center">Loading settings...</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,38 +128,17 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Audio Settings</CardTitle>
-              <CardDescription>Adjust game audio levels</CardDescription>
+              <CardDescription>Configure game audio</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="voice-volume">Voice Volume</Label>
-                <Slider
-                  id="voice-volume"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={[voiceVolume]}
-                  onValueChange={(value) => setVoiceVolume(value[0])}
-                  className="w-full"
+              <div className="flex items-center justify-between">
+                <Label htmlFor="voice-enabled">Enable Voice</Label>
+                <Switch
+                  id="voice-enabled"
+                  checked={voiceOn}
+                  onCheckedChange={handleVoiceToggle}
+                  disabled={updating}
                 />
-                <p className="text-sm text-muted-foreground text-right">
-                  {voiceVolume}%
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sfx-volume">Sound Effects Volume</Label>
-                <Slider
-                  id="sfx-volume"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={[sfxVolume]}
-                  onValueChange={(value) => setSfxVolume(value[0])}
-                  className="w-full"
-                />
-                <p className="text-sm text-muted-foreground text-right">
-                  {sfxVolume}%
-                </p>
               </div>
             </CardContent>
           </Card>
@@ -98,7 +157,7 @@ export default function SettingsPage() {
                       selectedAvatar === avatar
                         ? "ring-2 ring-primary bg-accent"
                         : ""
-                    }`}
+                    } ${updating ? "opacity-50 pointer-events-none" : ""}`}
                     onClick={() => handleAvatarSelect(avatar)}
                   >
                     <Image

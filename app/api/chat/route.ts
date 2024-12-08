@@ -1,6 +1,20 @@
+/**
+ * Chat API Route Handler
+ *
+ * Processes chat requests and generates AI responses using OpenAI's API.
+ * Handles message formatting, progress tracking, and scene generation prompts.
+ *
+ * @route POST /api/chat
+ */
+
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 
+/**
+ * POST request handler for chat interactions
+ * @param {Request} req - Incoming request object containing messages and context
+ * @returns {Response} Streamed AI response with formatted dialogue and metadata
+ */
 export async function POST(req: Request) {
   const { messages, systemMessage, currentProgress } = await req.json();
 
