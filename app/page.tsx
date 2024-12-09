@@ -29,6 +29,7 @@ const missions = [
     description: "Uncover the secrets of an ancient civilization",
     companion: "Professor Blue",
     image: "/mission-images/mission-1.jpg",
+    difficulty: "Beginner",
   },
   {
     id: "b2fa59e6-d406-4c51-8b99-00e72c2a3a10",
@@ -36,6 +37,7 @@ const missions = [
     description: "Navigate through an asteroid field in your spaceship",
     companion: "Captain Nova",
     image: "/mission-images/mission-2.jpg",
+    difficulty: "Intermediate",
   },
   {
     id: "82761887-a4c7-4bd7-921a-4f0a3c18a558",
@@ -43,6 +45,7 @@ const missions = [
     description: "Break the curse hurting magical creatures",
     companion: "Fairy Lumi",
     image: "/mission-images/mission-3.jpg",
+    difficulty: "Advanced",
   },
   {
     id: "e5b455a2-9f57-448f-a0f9-7dd873fb0dfd",
@@ -50,6 +53,7 @@ const missions = [
     description: "Infiltrate a high-security digital vault",
     companion: "Sergeant Nexus",
     image: "/mission-images/mission-4.jpg",
+    difficulty: "Expert",
   },
 ];
 
@@ -74,9 +78,15 @@ export default function Home() {
       <Navigation />
       <OnboardingPopup />
       <main className="container mx-auto px-4 py-8">
-        <h1 className="scroll-m-20 text-4xl font-bold tracking-tight mb-12 text-center text-primary">
+        <h1 className="scroll-m-20 text-4xl font-bold tracking-tight mb-4 text-center text-primary">
           Choose Your Adventure
         </h1>
+        <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
+          Welcome to Story Quest, where your choices shape unique adventures
+          across four distinct worlds. Track your progress, earn achievements,
+          and explore dynamically generated environments that respond to your
+          decisions.
+        </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
           {missions.map((mission) => (
             <div
@@ -125,9 +135,14 @@ export default function Home() {
                           ? "Complete"
                           : "Not Complete"}
                       </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        Companion: {mission.companion}
-                      </span>
+                      <div className="flex items-center gap-4">
+                        <Badge variant="outline" className="text-sm px-4 py-1">
+                          {mission.difficulty}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          Companion: {mission.companion}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>

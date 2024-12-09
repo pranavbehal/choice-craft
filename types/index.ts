@@ -4,6 +4,7 @@ export type Mission = {
   description: string;
   companion: string;
   image: string;
+  difficulty: "Beginner" | "Intermediate" | "Advanced" | "Expert";
 };
 
 export type MissionProgress = {

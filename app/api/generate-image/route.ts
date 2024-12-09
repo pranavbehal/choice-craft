@@ -48,7 +48,6 @@ export async function POST(req: Request) {
       result.output.length > 0
     ) {
       const imageUrl = result.output[0];
-      console.log("Generated image URL:", imageUrl);
       return Response.json({ imageUrl });
     }
 
