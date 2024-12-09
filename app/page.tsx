@@ -18,6 +18,8 @@ import { useProtectedAction } from "@/hooks/useProtectedAction";
 import { useRouter } from "next/navigation";
 import { useDatabase } from "@/hooks/useDatabase";
 import { type MissionProgress } from "@/types";
+import OnboardingPopup from "@/components/help/onboarding-popup";
+import { QuestionButton } from "@/components/help/question-button";
 
 /** Available missions with their metadata */
 const missions = [
@@ -70,6 +72,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
+      <OnboardingPopup />
       <main className="container mx-auto px-4 py-8">
         <h1 className="scroll-m-20 text-4xl font-bold tracking-tight mb-12 text-center text-primary">
           Choose Your Adventure
@@ -133,6 +136,7 @@ export default function Home() {
           ))}
         </div>
       </main>
+      <QuestionButton />
     </div>
   );
 }

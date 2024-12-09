@@ -55,6 +55,7 @@ import { useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { missions } from "@/app/page";
 import { type Mission } from "@/types";
+import { QuestionButton } from "@/components/help/question-button";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
@@ -466,6 +467,7 @@ export default function ResultsPage() {
           </TabsContent>
         </Tabs>
       </main>
+      <QuestionButton />
     </div>
   );
 }

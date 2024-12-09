@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useDatabase } from "@/hooks/useDatabase";
 import { toast } from "sonner";
 import { getAvatarPath } from "@/lib/utils";
+import { QuestionButton } from "@/components/help/question-button";
 
 /** Available avatar options */
 const avatars = [
@@ -132,7 +133,9 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
-                <Label htmlFor="voice-enabled">Enable Voice</Label>
+                <Label htmlFor="voice-enabled">
+                  Enable Narration (turn your volume up!)
+                </Label>
                 <Switch
                   id="voice-enabled"
                   checked={voiceOn}
@@ -174,6 +177,7 @@ export default function SettingsPage() {
           </Card>
         </div>
       </main>
+      <QuestionButton />
     </div>
   );
 }

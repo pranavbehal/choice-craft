@@ -26,6 +26,7 @@ import { useChat } from "ai/react";
 import { useDatabase } from "@/hooks/useDatabase";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { QuestionButton } from "@/components/help/question-button";
 
 /**
  * Maps companion names to their avatar images
@@ -82,7 +83,17 @@ export default function MissionPage() {
    * Updates when mission changes to maintain character consistency
    */
   useEffect(() => {
-    setSystemMessage(`You are ${currentMission.companion}...`);
+    setSystemMessage(`You are ${currentMission.companion}, a character in an interactive story.
+      Current mission: ${currentMission.title} - ${currentMission.description}. Don't be very wordy, you must be concise, use normal words, and act like a real person.
+      
+      Character Guidelines:
+      - Professor Blue: Speak like an enthusiastic, knowledgeable archaeologist
+      - Captain Nova: Use space terminology and be confident
+      - Fairy Lumi: Be gentle and mystical in your responses
+      - Sergeant Nexus: Be direct and use cybersecurity terms
+      
+      Keep responses concise (1-3 sentences) and stay in character.
+      Guide the user through the mission while maintaining the story's atmosphere.`);
   }, [currentMission]);
 
   /** Chat integration setup with OpenAI */
@@ -105,9 +116,17 @@ export default function MissionPage() {
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Syntactic validation - checks for empty/whitespace, if the AI is typing, or if the user has triggered the stop command
     if (!input.trim() || isTyping || isStopping) return;
 
     const userInput = input.trim().toLowerCase();
+
+    // Semantic validation - checks message length
+    if (userInput.length > 500) {
+      toast.error("Your message is too long (maximum 500 characters)");
+      return;
+    }
 
     // Check for stop command
     if (userInput === "stop") {
@@ -340,7 +359,7 @@ export default function MissionPage() {
   const getDisplayMessage = () => {
     if (showUserMessage) return currentText;
     if (isTyping && !currentText) return "Loading...";
-    if (!lastMessage) return "Begin your adventure...";
+    if (!lastMessage) return "Begin your adventure by saying hello...";
 
     try {
       if (lastMessage.role === "user") {
@@ -504,6 +523,32 @@ export default function MissionPage() {
           <div className="flex-grow flex flex-col p-4 relative">
             <div className="absolute bottom-32 left-0 right-0 px-4">
               <div className="relative max-w-2xl mx-auto">
+                {/* Character Images */}
+                <div className="absolute -top-40 w-full flex justify-between items-end z-10">
+                  <div className="flex flex-col items-center ml-6">
+                    <Image
+                      src={aiAvatar}
+                      alt="AI companion"
+                      width={160}
+                      height={160}
+                      className={`transition-all duration-500 ${getCharacterOpacity(
+                        "assistant"
+                      )}`}
+                    />
+                  </div>
+                  <div className="flex flex-col items-center mr-6">
+                    <Image
+                      src={userAvatar}
+                      alt="User avatar"
+                      width={160}
+                      height={160}
+                      className={`transition-all duration-300 ${getCharacterOpacity(
+                        "user"
+                      )}`}
+                    />
+                  </div>
+                </div>
+
                 {/* Dialogue Box */}
                 <div className="bg-[#F6E6C5] border-4 border-[#8B7355] rounded-2xl p-6 shadow-lg">
                   <p className="text-black text-lg min-h-[28px] [&>span]:font-bold">
@@ -537,11 +582,10 @@ export default function MissionPage() {
                 onChange={handleInputChange}
                 placeholder="Type your message..."
                 className="bg-card h-12 text-lg px-4 border-2 focus:border-primary"
-                disabled={isStopping}
               />
               <Button
                 type="submit"
-                disabled={isTyping || !input.trim() || isStopping}
+                disabled={isTyping || !input.trim()}
                 size="lg"
               >
                 <Send className="h-5 w-5" />
@@ -550,8 +594,9 @@ export default function MissionPage() {
           </div>
         </main>
       </div>
-
-      {/* Add a semi-transparent overlay when stopping */}
+      <div className="relative z-[100]">
+        <QuestionButton />
+      </div>
       {isStopping && (
         <div className="fixed inset-0 bg-background/50 backdrop-blur-sm z-50 pointer-events-none" />
       )}

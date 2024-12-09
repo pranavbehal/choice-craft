@@ -32,6 +32,7 @@ export interface Database {
           voice_on: boolean;
           profile_picture: number;
           created_at: string;
+          has_seen_tutorial: boolean;
         };
         Insert: {
           id: string;
@@ -41,6 +42,7 @@ export interface Database {
           voice_on?: boolean;
           profile_picture?: number;
           created_at?: string;
+          has_seen_tutorial?: boolean;
         };
         Update: {
           id?: string;
@@ -50,6 +52,7 @@ export interface Database {
           voice_on?: boolean;
           profile_picture?: number;
           created_at?: string;
+          has_seen_tutorial?: boolean;
         };
       };
 
