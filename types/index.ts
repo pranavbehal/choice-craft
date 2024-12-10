@@ -1,11 +1,17 @@
-export type Mission = {
+export type MissionDifficulty =
+  | "Beginner"
+  | "Intermediate"
+  | "Advanced"
+  | "Expert";
+
+export interface Mission {
   id: string;
   title: string;
   description: string;
   companion: string;
   image: string;
-  difficulty: "Beginner" | "Intermediate" | "Advanced" | "Expert";
-};
+  difficulty: MissionDifficulty;
+}
 
 export type MissionProgress = {
   id: string;

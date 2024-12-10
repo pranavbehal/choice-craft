@@ -65,7 +65,7 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
  * @returns {string} The display name of the mission
  */
 const getMissionName = (missionId: string) => {
-  const mission = missions.find((m: Mission) => m.id === missionId);
+  const mission = missions.find((m) => m.id === missionId);
   return mission?.title || `Mission ${missionId}`;
 };
 
