@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Send } from "lucide-react";
 import Image from "next/image";
-import { missions } from "@/app/page";
+import { missions } from "@/app/data/missions";
 import { useParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useChat } from "ai/react";
