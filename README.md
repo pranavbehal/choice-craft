@@ -49,7 +49,7 @@ An interactive storytelling application where users engage with AI companions ac
      - Robust error handling
      - Secure authentication
 
-While the basic prompt called for a simple interactive story with a stop function, Story Quest is a fully-functioning application that turned this concept into an immersive adventure platform with AI-powered interactions, visual and audio elements, and comprehensive progress tracking.
+While the basic prompt asked for a simple interactive story with a stop function, Story Quest is a fully-functioning application that turned this concept into an immersive adventure platform with AI-powered interactions, visual and audio elements, and comprehensive progress tracking.
 
 ### 🌟 Core Features
 
@@ -166,6 +166,7 @@ bun dev
 - TypeScript (Apache 2.0 License)
 - Node.js (MIT License)
 - Replicate AI and Black Forest Labs image models (all images generated allowed commercial use)
+- UserWay ADA Compliant Accessibility Plugin
 
 ### 🔨 Development Process
 
@@ -232,6 +233,32 @@ bun dev
    - User preferences
    - Achievement tracking
    - Error recovery
+
+## ♿ Accessibility Features
+
+I have implemented the UserWay ADA Compliant Accessibility Plugin, which provides a comprehensive set of accessibility tools to allow anyone to use the application:
+
+- **Visual Adjustments**:
+
+  - Contrast adjustments
+  - Text size controls
+  - Highlight links
+  - Content scaling
+  - Dyslexia-friendly font
+  - Color adjustments
+
+- **Reading Aids**:
+
+  - Text spacing controls
+  - Line height adjustments
+  - Dyslexia-friendly formatting
+
+- **Motion Control**:
+  - Animation pause/play
+  - Reduced motion options
+  - Focus indicators
+
+These accessibility features can be accessed through the UserWay Accessibility widget icon, located on the bottom-left corner of every page of the application.
 
 ### 🛡️ Error Handling & Validation
 
