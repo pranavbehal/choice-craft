@@ -23,7 +23,8 @@ export async function POST(req: Request) {
   IMPORTANT: Return your responses as a JSON object with these fields:
   {
     "userResponse": "Your actual dialogue message starting with your name (e.g., 'Professor Blue: Hello!')",
-    "imagePrompt": "Detailed scene description for image generation",
+    "imagePrompt": "Detailed scene description for image generation. Should be artistic and usually have no people visible. Good example: A mystical ancient stone city hidden in dense jungle, with crumbling temples, overgrown with vines, mysterious glowing symbols carved into walls, mist rolling through narrow streets, dramatic lighting, digital art style
+",
     "progress": number (0-100, current: ${currentProgress})
   }
 
