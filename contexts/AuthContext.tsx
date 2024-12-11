@@ -15,6 +15,7 @@ import { supabase } from "@/lib/supabase";
 import { User, Session } from "@supabase/supabase-js";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { Suspense } from "react";
 
 /** Authentication context type definition */
 type AuthContextType = {
@@ -127,11 +128,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider
-      value={{ user, session, loading, signInWithGoogle, signOut }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <Suspense fallback={<div>Loading...</div>}>
+      <AuthContext.Provider
+        value={{ user, session, loading, signInWithGoogle, signOut }}
+      >
+        {children}
+      </AuthContext.Provider>
+    </Suspense>
   );
 }
 
