@@ -20,7 +20,7 @@ import { useDatabase } from "@/hooks/useDatabase";
 import { type MissionProgress } from "@/types";
 import OnboardingPopup from "@/components/help/onboarding-popup";
 import { QuestionButton } from "@/components/help/question-button";
-import { missions } from "@/app/data/missions";
+import { missions } from "@/data/missions";
 
 export default function Home() {
   const router = useRouter();

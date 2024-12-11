@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/select";
 import { useState } from "react";
 import { Progress } from "@/components/ui/progress";
-import { missions } from "@/app/data/missions";
+import { missions } from "@/data/missions";
 import { type Mission } from "@/types";
 import { QuestionButton } from "@/components/help/question-button";
 
