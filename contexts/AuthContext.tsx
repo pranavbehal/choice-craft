@@ -13,11 +13,75 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { User, Session } from "@supabase/supabase-js";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Suspense } from "react";
 
-/** Authentication context type definition */
+// Create a separate component for the auth logic that uses useSearchParams
+function AuthLogic({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Initialize session
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
+      setLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signInWithGoogle = async () => {
+    const returnTo =
+      new URLSearchParams(window.location.search).get("return_to") || "/";
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?return_to=${returnTo}`,
+      },
+    });
+
+    if (error) {
+      console.error("Error signing in with Google:", error);
+    }
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Error signing out:", error);
+      toast.error("Failed to sign out");
+    } else {
+      setUser(null);
+      setSession(null);
+      router.push("/");
+      toast.success("Signed out successfully");
+    }
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{ user, session, loading, signInWithGoogle, signOut }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// Auth context definition
 type AuthContextType = {
   user: User | null;
   session: Session | null;
@@ -34,106 +98,11 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
 });
 
+// Main AuthProvider component
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    // Initialize session
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
-      setLoading(false);
-
-      // Debug session storage
-      console.log("Auth Context - Cookies:", document.cookie);
-      console.log("Auth Context - Local Storage:", {
-        accessToken: localStorage.getItem("supabase.auth.token"),
-        refreshToken: localStorage.getItem("supabase.auth.refreshToken"),
-      });
-
-      // Log initial session state
-      if (initialSession?.user) {
-        console.log("Initial User Session:", {
-          id: initialSession.user.id,
-          email: initialSession.user.email,
-          name: initialSession.user.user_metadata.full_name,
-          avatar: initialSession.user.user_metadata.avatar_url,
-        });
-      }
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth State Change:", event);
-
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-
-      // Log user info on sign in
-      if (event === "SIGNED_IN" && session?.user) {
-        console.log("User Signed In:", {
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.user_metadata.full_name,
-          avatar: session.user.user_metadata.avatar_url,
-          metadata: session.user.user_metadata,
-        });
-      }
-
-      // Log when user signs out
-      if (event === "SIGNED_OUT") {
-        console.log("User Signed Out");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const signInWithGoogle = async () => {
-    const returnTo = searchParams.get("return_to") || "/";
-    console.log("Initiating Google Sign In...");
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?return_to=${returnTo}`,
-      },
-    });
-
-    if (error) {
-      console.error("Error signing in with Google:", error);
-    }
-  };
-
-  const signOut = async () => {
-    console.log("Signing out...");
-
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error signing out:", error);
-      toast.error("Failed to sign out");
-    } else {
-      setUser(null);
-      setSession(null);
-      router.push("/");
-      toast.success("Signed out successfully");
-    }
-  };
-
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <AuthContext.Provider
-        value={{ user, session, loading, signInWithGoogle, signOut }}
-      >
-        <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
-      </AuthContext.Provider>
+      <AuthLogic>{children}</AuthLogic>
     </Suspense>
   );
 }

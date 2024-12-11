@@ -10,6 +10,7 @@
 
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -29,7 +30,7 @@ const links = [
   { name: "Settings", href: "/settings", icon: Settings, protected: true },
 ];
 
-export function Navigation() {
+function NavigationContent() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { settings } = useDatabase();
@@ -88,5 +89,13 @@ export function Navigation() {
         </div>
       </nav>
     </ClientWrapper>
+  );
+}
+
+export function Navigation() {
+  return (
+    <Suspense fallback={<div>Loading navigation...</div>}>
+      <NavigationContent />
+    </Suspense>
   );
 }
