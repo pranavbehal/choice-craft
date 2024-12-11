@@ -132,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       <AuthContext.Provider
         value={{ user, session, loading, signInWithGoogle, signOut }}
       >
-        {children}
+        <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
       </AuthContext.Provider>
     </Suspense>
   );
