@@ -53,7 +53,8 @@ function AuthLogic({ children }: { children: React.ReactNode }) {
     //     ? "https://choice-craft.vercel.app" // Your production URL
     //     : process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL || "https://choice-craft.vercel.app";
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
