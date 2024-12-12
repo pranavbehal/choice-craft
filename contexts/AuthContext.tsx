@@ -47,15 +47,19 @@ function AuthLogic({ children }: { children: React.ReactNode }) {
     const returnTo =
       new URLSearchParams(window.location.search).get("return_to") || "/";
 
+    // Get the base URL from environment variable or fallback to window.location.origin
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?return_to=${returnTo}`,
+        redirectTo: `${baseUrl}/auth/callback?return_to=${returnTo}`,
       },
     });
 
     if (error) {
       console.error("Error signing in with Google:", error);
+      toast.error("Failed to sign in with Google");
     }
   };
 

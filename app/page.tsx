@@ -50,7 +50,11 @@ export default function Home() {
           Welcome to Story Quest, where your choices shape unique adventures
           across four distinct worlds. Track your progress, earn achievements,
           and explore dynamically generated environments that respond to your
-          decisions.
+          decisions. This app not only achieves, but goes beyond the
+          expectations for the Introduction to Programmming Competition by
+          allowing users to chat with an AI companion to create an interactive
+          story shaped around the user&apos;s choices, and the user can stop the
+          story at any time by saying &quot;stop&quot;.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
           {missions.map((mission) => (
