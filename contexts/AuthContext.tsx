@@ -47,8 +47,11 @@ function AuthLogic({ children }: { children: React.ReactNode }) {
     const returnTo =
       new URLSearchParams(window.location.search).get("return_to") || "/";
 
-    // Get the base URL from environment variable or fallback to window.location.origin
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+    // Determine the base URL based on the current environment
+    const baseUrl =
+      process.env.NODE_ENV === "production"
+        ? "https://choice-craft.vercel.app" // Your production URL
+        : process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
